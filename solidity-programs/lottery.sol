@@ -3,7 +3,7 @@ pragma solidity >=0.8.21;
 
 contract Lottery {
     struct Ticket {
-        string name;
+        address owner;
         uint ticketNumber;
     }
     
@@ -11,37 +11,44 @@ contract Lottery {
 
     uint winningNumber;
 
-    address user = msg.sender;    
+    mapping(uint => bool) public ticketsExist;
+    mapping(address => uint) public addressToTicketNumber;
 
-    mapping(uint => string) public tickets;
-    mapping(uint=>Ticket) public numToData;
+    event TicketBought(address indexed owner, uint ticketNumber);
+    event WinningNumberSet(uint winningNumber);
 
-    event DataStored(string name, uint Amount);
-    
-    function buyTicket(string memory name, uint ticketNumber) public returns (bool) {
-        if (keccak256(abi.encodePacked(tickets[ticketNumber])) ==  keccak256(abi.encodePacked(""))) {
-            tickets[ticketNumber]=name;
-            emit DataStored(name,ticketNumber);
-        }
-        return false;
+    constructor() {
+        ticketsExist[0] = true;
     }
 
-    function buyTicket1( string memory name, uint ticketNumber) public {
-        require((keccak256(abi.encodePacked(tickets[ticketNumber])) ==  keccak256(abi.encodePacked(""))), "Ticket Already Exists");
-        numToData[ticketNumber] = Ticket(name,ticketNumber);
-        emit DataStored(name,ticketNumber);
-    }
+    function buyTicket(uint ticketNumber) public returns (bool) {
+        require(!ticketsExist[ticketNumber], "Ticket already bought.");
+        require(addressToTicketNumber[msg.sender] == 0, "You have already bought a ticket.");
 
-    function setWinningNumber(string memory name, uint ticketNumber) public returns (bool){
-        if(keccak256(abi.encodePacked(name)) != keccak256(abi.encodePacked("admin"))){
-            return false;
-        }
+        address owner = msg.sender;
+        Ticket memory newTicket = Ticket({
+            owner: owner,
+            ticketNumber: ticketNumber
+        });
 
-        winningNumber=ticketNumber;
+        dataArray.push(newTicket);
+        addressToTicketNumber[owner] = ticketNumber;
+        ticketsExist[ticketNumber] = true;
+
+        emit TicketBought(owner, ticketNumber);
+
         return true;
     }
 
-    function returnWinningNumber()public view returns(uint){
+    function setWinningNumber(uint _winningNumber) public {
+        require(msg.sender == 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4, "Only admin can set winning number.");
+
+        winningNumber = _winningNumber;
+
+        emit WinningNumberSet(winningNumber);
+    }
+
+    function getWinningNumber() public view returns (uint) {
         return winningNumber;
     }
 }
